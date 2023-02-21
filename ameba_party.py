@@ -3,6 +3,8 @@ from time import sleep
 import socket
 import logging
 import os
+import threading
+
 
 UDP_IP = ""
 OTA_ANNOUNCE_PORT = 8081
@@ -14,6 +16,7 @@ INT_MAX_VALUE = 2**32 - 1
 DEFAULT_TIMEOUT = 2  # seconds
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.CRITICAL)
 
 
 class Robot:
@@ -32,6 +35,7 @@ class Robot:
 
     def perform_ota(self, header: bytes, firmware: bytes):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            print(f"Sending firmware to {self.ip_address}")
             s.connect((self.ip_address, OTA_UPDATE_PORT))
             s.send(header)
             s.send(firmware)
@@ -60,18 +64,19 @@ class AmebaParty:
                     len(data) >= len(BPARTY_IDENTIFIER)
                     and data[: len(BPARTY_IDENTIFIER)] == BPARTY_IDENTIFIER
                 ):
-                    r = Robot(addr, data)
+                    r = Robot(addr[0], data)
                     if r not in self.robots:
                         self.add(r)
                     else:
                         self.update(r.ID, data)
-                    logging.debug(
-                        f'Incoming message from {addr} ({str(r)}): {data.decode("utf-8")}'
-                    )
+                    # logging.debug(
+                    #     f'Incoming message from {addr} ({str(r)}): {data.decode("utf-8")}'
+                    # )
                 else:
-                    logging.debug(
-                        f'Incoming message from {addr} (not recognized): {data.decode("utf-8")}'
-                    )
+                    # logging.debug(
+                    #     f'Incoming message from {addr} (not recognized): {data.decode("utf-8")}'
+                    # )
+                    pass
 
             except socket.timeout:
                 pass
@@ -125,4 +130,7 @@ class AmebaParty:
 
             for robot in self.get_active_robots():
                 logger.info(f"Performing OTA on {str(robot)}")
-                robot.perform_ota(header, firmware)
+                # create thread
+                t = threading.Thread(target=robot.perform_ota, args=(header, firmware))
+                t.start()
+                # robot.perform_ota(header, firmware)
