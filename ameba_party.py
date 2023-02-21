@@ -2,10 +2,14 @@ from datetime import datetime, timedelta
 from time import sleep
 import socket
 import logging
+import os
 
 UDP_IP = ""
-UDP_PORT = 8081
+OTA_ANNOUNCE_PORT = 8081
+OTA_UPDATE_PORT = 8082
+
 BPARTY_IDENTIFIER = b"bparty"
+INT_MAX_VALUE = 2**32 - 1
 
 DEFAULT_TIMEOUT = 2  # seconds
 
@@ -26,6 +30,12 @@ class Robot:
     def was_seen_recently(self, seconds=DEFAULT_TIMEOUT):
         return datetime.now() - self.last_seen < timedelta(seconds=seconds)
 
+    def perform_ota(self, header: bytes, firmware: bytes):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.ip_address, OTA_UPDATE_PORT))
+            s.send(header)
+            s.send(firmware)
+
     def __eq__(self, other):
         return self.ID == other.ID
 
@@ -40,7 +50,7 @@ class AmebaParty:
         self._sock.settimeout(0.1)
         self._callback = callback
 
-    def listen_blocking(self, ip=UDP_IP, port=UDP_PORT):
+    def listen_blocking(self, ip=UDP_IP, port=OTA_ANNOUNCE_PORT):
         self._sock.bind((ip, port))
         logging.debug(f"Listening for UDP messages on port {port}")
         while True:
@@ -88,3 +98,31 @@ class AmebaParty:
 
     def count(self, seconds=DEFAULT_TIMEOUT):
         return len(self.get_active_robots(seconds))
+
+    def perform_ota(self, filename):
+        f = open(filename, "rb")
+        checksum = 0
+        length = os.stat(filename).st_size
+        empty = 0
+
+        byte = f.read(1)
+        while byte != b"":
+            checksum = checksum + int.from_bytes(byte, "big")
+            byte = f.read(1)
+        checksum = checksum % INT_MAX_VALUE
+        f.close()
+
+        logger.debug("Checksum: " + hex(checksum))
+        logger.debug("Length: " + str(length))
+
+        header = bytearray()
+        header = header + checksum.to_bytes(4, "little")
+        header = header + empty.to_bytes(4, "little")
+        header = header + length.to_bytes(4, "little")
+
+        with open(filename, "rb") as f:
+            firmware = f.read()
+
+            for robot in self.get_active_robots():
+                logger.info(f"Performing OTA on {str(robot)}")
+                robot.perform_ota(header, firmware)

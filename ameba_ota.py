@@ -5,10 +5,6 @@ INT_MAX_VALUE = 2**32 - 1
 
 
 def push_update(filename, host, port):
-    # filename = "ota.bin"
-    # host = "192.168.32.224"
-    # port = 8080
-
     f = open(filename, "rb")
     checksum = 0
     length = os.stat(filename).st_size
