@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-# reduce logging from ameba_party
+# reduce logging from ameba_party, however this does not work
 logging.getLogger("ameba_party").setLevel(logging.ERROR)
 
 dpg.create_context()
