@@ -4,19 +4,21 @@ from ameba_party import AmebaParty
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-amebaparty = AmebaParty()
 
 dpg.create_context()
 
+
+
+def update_callback(number_of_robots):
+    dpg.set_value("robots", f"Number of robots: {number_of_robots}")
+    logging.debug("callback called")
+
+amebaparty = AmebaParty(callback=update_callback)
 server_thread = threading.Thread(name="server", target=amebaparty.listen_blocking)
 server_thread.start()
 
-
-# dpg.set_primary_window("Primary Window", True)
-
-
-with dpg.window(label="Update"):
-    dpg.add_text("Hello, world")
+with dpg.window(tag="Update"):
+    dpg.add_text("Hello, world", tag="robots")
 
 dpg.set_primary_window("Update", True)
 
