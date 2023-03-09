@@ -22,7 +22,7 @@ logger.setLevel(logging.CRITICAL)
 class Robot:
     def __init__(self, ip_address, message):
         self.ip_address = ip_address
-        self.ID = ip_address[0].split(".")[-1]
+        self.ID = ip_address.split(".")[-1]
         self.last_message = None
         self.last_seen = datetime.now()
 
@@ -39,6 +39,7 @@ class Robot:
             s.connect((self.ip_address, OTA_UPDATE_PORT))
             s.send(header)
             s.send(firmware)
+            print(f"done")
 
     def __eq__(self, other):
         return self.ID == other.ID
@@ -67,15 +68,17 @@ class AmebaParty:
                     r = Robot(addr[0], data)
                     if r not in self.robots:
                         self.add(r)
+                        # logging.debug(f"add robot {r}")
                     else:
                         self.update(r.ID, data)
-                    # logging.debug(
-                    #     f'Incoming message from {addr} ({str(r)}): {data.decode("utf-8")}'
-                    # )
+                        # logging.debug(f"updating robot {r}")
+                    logging.debug(
+                        f'Incoming message from {addr} ({str(r)}): {data.decode("utf-8")}'
+                    )
                 else:
-                    # logging.debug(
-                    #     f'Incoming message from {addr} (not recognized): {data.decode("utf-8")}'
-                    # )
+                    logging.debug(
+                        f'Incoming message from {addr} (not recognized): {data.decode("utf-8")}'
+                    )
                     pass
 
             except socket.timeout:
@@ -83,7 +86,7 @@ class AmebaParty:
             if self._callback:
                 self._callback(self.count())
 
-            sleep(1)
+            sleep(0.1)
 
     def add(self, robot):
         self.robots.append(robot)
